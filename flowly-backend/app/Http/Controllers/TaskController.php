@@ -4,32 +4,48 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use Illuminate\Http\Request;
+use App\Http\Requests\TaskCreateRequest;
 
 class TaskController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(['tasks' => Task::get()], 200);
+        $requesterId = $request->get("requesterId");
+        $tasks = Task::get()->where("user_id", '=', $requesterId);
+        return response()->json(['tasks' => $tasks], 200);
     }
 
-    public function store(Request $request)
+    public function store(TaskCreateRequest $request)
     {
         try {
+            $requesterId = $request->get("requesterId");
+            $request["user_id"] = $requesterId;
+
             Task::create($request->all());
-            return response()->json(["result" => "ok"], 200);
+
+            return response()->json(["result" => "ok"], 201);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
+        $requesterId = $request->get('requesterId');
+
         $task = Task::find($id);
-        if (!$task) {
+        if (empty($task)) {
             return response()->json(['error' => 'task not found'], 404);
         }
 
-        return response()->json(['task' => $task], 200);
+        if ($task->user_id !== $requesterId) {
+            return response()->json(['error' => 'forbidden request'], 403);
+        }
+
+        $formattedTask = $task->toArray();
+        unset($formattedTask["user_id"]);
+
+        return response()->json(['task' => $formattedTask], 200);
     }
 
     public function update(Request $request, $id)

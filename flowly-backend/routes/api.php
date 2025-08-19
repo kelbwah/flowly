@@ -1,18 +1,11 @@
 <?php
 
+use App\Http\Controllers\LoginController;
+use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\UserController;
+use App\Http\Middleware\Authenticated;
 use Illuminate\Support\Facades\Route;
-
-Route::get('/ping', function (Request $request) {
-    $connection = DB::connection('mongodb');
-    $msg = 'MongoDB is accessible!';
-    try {
-        $connection->command(['ping' => 1]);
-    } catch (\Exception $e) {
-        $msg = 'MongoDB is not accessible. Error: ' . $e->getMessage();
-    }
-    return ['msg' => $msg];
-});
 
 Route::resource('tasks', TaskController::class)->only([
     'index',
@@ -20,4 +13,15 @@ Route::resource('tasks', TaskController::class)->only([
     'show',
     'update',
     'destroy',
-]);
+])->middleware(Authenticated::class);
+
+Route::resource('users', UserController::class)->only([
+    'show',
+    'update',
+    'destroy',
+])->middleware(Authenticated::class);
+
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [LoginController::class, 'store']);
+    Route::post('/register', [RegisterController::class, 'store']);
+});
